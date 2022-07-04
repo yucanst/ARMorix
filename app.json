@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "camera-app",
-    "slug": "camera-app",
+    "name": "mecit-camera",
+    "slug": "mecit-camera",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
