@@ -5,24 +5,28 @@ import { AutoFocus, Camera, CameraType, FlashMode } from 'expo-camera';
 
 let camType = CameraType.back
 let imageURI = ''
-let imageDimensions = {
-    height: '',
-    width: ''
-}
 
 // Component to select front/back camera
 function Type({ navigation }) {
+    function selectType(type) {
+        if (type === 'front') {
+            camType = CameraType.front
+        } else {
+            camType = CameraType.back
+        }
+
+        navigation.navigate('Orientation')
+    }
+
     return (
         <View style={styles.container}>
             <View style={styles.iconContainer}>
-                <Icon style={styles.icon} name='camera-outline'
-                    onMouseOver={() => camType = CameraType.back} onPress={() => navigation.navigate('Orientation')} />
+                <Icon style={styles.icon} name='camera-outline' onPress={() => selectType('back')} />
                 <Text style={styles.text}>Scenery</Text>
             </View>
 
             <View style={styles.iconContainer}>
-                <Icon style={styles.icon} name='camera-reverse-outline'
-                    onMouseOver={() => camType = CameraType.front} onPress={() => navigation.navigate('Orientation')} />
+                <Icon style={styles.icon} name='camera-reverse-outline' onPress={() => selectType('front')} />
                 <Text style={styles.text}>Selfie</Text>
             </View>
         </View>
@@ -50,8 +54,6 @@ function Application({ navigation }) {
         try {
             const image = await cam.current.takePictureAsync(options);
             imageURI = image.uri;
-            imageDimensions.height = image.height * 0.45
-            imageDimensions.width = image.width * 0.45
             navigation.navigate('Review')
         } catch (err) {
             console.log(err);
@@ -72,7 +74,7 @@ function Application({ navigation }) {
                     zoom={zoom}
                 >
                     <View style={{ backgroundColor: 'transparent', flex: 1, flexDirection: 'row', margin: 20 }}>
-                        <TouchableOpacity style={{ alignItems: 'center', alignSelf: 'flex-end', flex: 0.1 }}
+                        <TouchableOpacity style={{ alignItems: 'center', alignSelf: 'flex-end' }}
                             onPress={() => captureImage()}>
                             <Text style={{ color: 'white', fontSize: 18 }}>Capture</Text>
                         </TouchableOpacity>
@@ -90,7 +92,7 @@ function Review({ navigation }) {
     }
 
     function retake() {
-        navigation.navigate('Camera');
+        // Return to camera screen (?)
     }
 
     function save() {
@@ -101,7 +103,7 @@ function Review({ navigation }) {
     return (
         <View style={styles.reviewContainer}>
             <Icon style={styles.social} name='share-social-outline' />
-            <Image style={{ width: imageDimensions.width, height: imageDimensions.height }} source={{ uri: imageURI }} />
+            <Image style={{ width: 150, height: 300 }} source={{ uri: imageURI }} />
             <View style={styles.buttonContainer}>
                 <Button title="Save Photo" color="#212121" onPress={() => save()} />
             </View>
@@ -123,11 +125,12 @@ const styles = StyleSheet.create({
 
     // Type
     iconContainer: {
+        alignItems: 'center',
         textAlign: 'center',
         paddingBottom: 30
     },
     icon: {
-        fontSize: '45vw'
+        fontSize: 66
     },
     text: {
         fontSize: 18
