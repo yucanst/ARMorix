@@ -1,6 +1,6 @@
 import React from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Component to set arm orientation
 export default function Orientation({ navigation }) {
@@ -14,14 +14,21 @@ export default function Orientation({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <View style={styles.iconContainer}>
-                <Icon style={styles.icon} name='phone-portrait-outline' onPress={() => selectOrientation('portrait')} />
-                <Text style={styles.text}>Portrait</Text>
+            <View style={styles.topContainer}>
+                <Text style={styles.title}>Select your{'\n'}Orientation</Text>
+                <Text style={styles.description}>take the image in your{'\n'}desired orientation!</Text>
             </View>
 
-            <View style={styles.iconContainer}>
-                <Icon style={styles.icon} name='phone-landscape-outline' onPress={() => selectOrientation('landscape')} />
-                <Text style={styles.text}>Landscape</Text>
+            <View style={styles.bottomContainer}>
+                <TouchableOpacity style={styles.iconContainer} onPress={() => selectOrientation('portrait')}>
+                    <Icon style={{ fontSize: 66 }} name='phone-portrait-outline' />
+                    <Text style={styles.label}>Portrait</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.iconContainer} onPress={() => selectOrientation('landscape')}>
+                    <Icon style={{ fontSize: 66 }} name='phone-landscape-outline' />
+                    <Text style={styles.label}>Landscape</Text>
+                </TouchableOpacity>
             </View>
         </View>
     )
@@ -29,20 +36,42 @@ export default function Orientation({ navigation }) {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#fafafa',
+        flex: 1
+    },
+    topContainer: {
+        height: '25%',
+        justifyContent: 'center',
+        marginTop: 45,
+        paddingLeft: 45
+    },
+    title: {
+        fontWeight: 'bold',
+        fontSize: 25
+    },
+    description: {
+        fontSize: 18,
+        paddingTop: 15,
+        paddingBottom: 15
+    },
+    bottomContainer: {
         alignItems: 'center',
-        justifyContent: 'center'
+        textAlign: 'center',
+        width: '100%'
     },
     iconContainer: {
         alignItems: 'center',
-        textAlign: 'center',
-        paddingBottom: 30
+        backgroundColor: '#ffffff',
+        border: '1px solid black',
+        borderRadius: 30,
+        height: 200,
+        justifyContent: 'center',
+        marginBottom: 50,
+        width: '80%'
     },
-    icon: {
-        fontSize: 66
-    },
-    text: {
-        fontSize: 18
+    label: {
+        fontSize: 18,
+        fontStyle: 'italic',
+        paddingTop: 10
     }
 });
