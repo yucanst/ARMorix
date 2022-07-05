@@ -2,20 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Button, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AutoFocus, Camera, CameraType, FlashMode } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
 
-let camType = CameraType.back
-let imageURI = ''
+let camType = CameraType.back;
 
 // Component to select front/back camera
 function Type({ navigation }) {
     function selectType(type) {
         if (type === 'front') {
-            camType = CameraType.front
+            camType = CameraType.front;
         } else {
-            camType = CameraType.back
+            camType = CameraType.back;
         }
 
-        navigation.navigate('Orientation')
+        navigation.navigate('Orientation');
     }
 
     return (
@@ -38,90 +38,91 @@ function Type({ navigation }) {
             </View>
         </View>
     )
-}
+};
 
 // Component that contains camera features
 function Application({ navigation }) {
-    const [permission, setPermission] = useState(false);
+    const cameraRef = useRef();
+    const [mediaLibraryPermission, setMediaLibraryPermission] = useState(false);
+    const [cameraPermission, setCameraPermission] = useState(false);
+    const [image, setImage] = useState();
+
+    // Camera settings
     const [flash, setFlash] = useState(FlashMode.off)
     const [zoom, setZoom] = useState(0)
 
-    const cam = useRef();
-
     useEffect(() => {
         (async () => {
-            const { status } = await Camera.requestCameraPermissionsAsync();
-            setPermission(status === 'granted');
+            const camPermission = await Camera.requestCameraPermissionsAsync();
+            const mlPermission = await MediaLibrary.requestPermissionsAsync();
+            setCameraPermission(camPermission.status === 'granted');
+            setMediaLibraryPermission(mlPermission.status === 'granted');
         })();
     }, []);
+
+    if (!cameraPermission) {
+        return <Text>Please allow camera permission in settings.</Text>;
+    }
 
     async function captureImage() {
         const options = { quality: 1, skipProcessing: false }
 
         try {
-            const image = await cam.current.takePictureAsync(options);
-            imageURI = image.uri;
-            navigation.navigate('Review')
+            const newImage = await cameraRef.current.takePictureAsync(options);
+            setImage(newImage);
         } catch (err) {
             console.log(err);
         }
     }
 
-    if (permission === false) {
-        return <Text>No access to camera</Text>;
-    } else {
+    // Review once image is captured
+    if (image) {
+        function shareImage() {
+            // Instagram API
+        }
+
+        function saveImage() {
+            try {
+                MediaLibrary.saveToLibraryAsync(image.uri).then(() => {
+                    setImage(undefined);
+                    console.log("image saved");
+                })
+            } catch (err) {
+                console.log(err);
+            }
+        }
+
         return (
-            <View style={{ flex: 1 }}>
-                <Camera
-                    style={{ flex: 1 }}
-                    type={camType}
-                    ref={cam}
-                    autoFocus={AutoFocus.on}
-                    flashMode={flash}
-                    zoom={zoom}
-                >
-                    <View style={{ backgroundColor: 'transparent', flex: 1, flexDirection: 'row', margin: 20 }}>
-                        <TouchableOpacity style={{ alignItems: 'center', alignSelf: 'flex-end' }}
-                            onPress={() => captureImage()}>
-                            <Text style={{ color: 'white', fontSize: 18 }}>Capture</Text>
-                        </TouchableOpacity>
-                    </View>
-                </Camera>
+            <View style={styles.previewContainer}>
+                <Icon style={styles.social} name='share-social-outline' />
+                <Image style={styles.preview} source={{ uri: image.uri }} />
+                {mediaLibraryPermission ? <Button title="Save" color="#212121" onPress={() => saveImage()} /> : undefined}
+                <Button title="Retake" color="#212121" onPress={() => setImage(undefined)} />
             </View>
         )
     }
-}
-
-// Component to review image
-function Review({ navigation }) {
-    function share() {
-        // Instagram API
-    }
-
-    function retake() {
-        // Return to camera screen (?)
-    }
-
-    function save() {
-        // Save to phone gallery
-        navigation.navigate('Type');
-    }
 
     return (
-        <View style={styles.reviewContainer}>
-            <Icon style={styles.social} name='share-social-outline' />
-            <Image style={{ width: 150, height: 300 }} source={{ uri: imageURI }} />
-            <View style={styles.buttonContainer}>
-                <Button title="Save Photo" color="#212121" onPress={() => save()} />
+        <Camera
+            style={{ flex: 1 }}
+            type={camType}
+            ref={cameraRef}
+            autoFocus={AutoFocus.on}
+            flashMode={flash}
+            zoom={zoom}
+        >
+            <View style={{ backgroundColor: 'transparent', flex: 1, flexDirection: 'row', margin: 20 }}>
+                <TouchableOpacity style={{ alignItems: 'center', alignSelf: 'flex-end' }}
+                    onPress={() => captureImage()}>
+                    <Text style={{ color: 'white', fontSize: 18 }}>Capture</Text>
+                </TouchableOpacity>
             </View>
-            <View style={styles.buttonContainer}>
-                <Button title="Retake Photo" color="#212121" onPress={() => retake()} />
-            </View>
-        </View>
+        </Camera>
     )
-}
+};
 
-export { Type, Application, Review }
+export { Type, Application };
+
 const styles = StyleSheet.create({
     // Type
     container: {
@@ -167,9 +168,13 @@ const styles = StyleSheet.create({
     // Camera
 
     // Review
-    reviewContainer: {
+    previewContainer: {
         alignItems: 'center',
-        backgroundColor: '#fff',
+        justifyContent: 'center',
+        flex: 1
+    },
+    preview: {
+        alignSelf: 'stretch',
         flex: 1
     },
     social: {
@@ -177,9 +182,6 @@ const styles = StyleSheet.create({
         fontSize: 30,
         marginBottom: 30,
         marginRight: 25,
-        marginTop: 15
-    },
-    buttonContainer: {
         marginTop: 15
     }
 });
