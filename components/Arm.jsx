@@ -32,7 +32,7 @@ export default function Orientation({ navigation }) {
             </View>
         </View>
     )
-}
+};
 
 const styles = StyleSheet.create({
     container: {

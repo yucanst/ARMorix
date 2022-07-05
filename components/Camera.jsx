@@ -85,7 +85,6 @@ function Application({ navigation }) {
             try {
                 MediaLibrary.saveToLibraryAsync(image.uri).then(() => {
                     setImage(undefined);
-                    console.log("image saved");
                 })
             } catch (err) {
                 console.log(err);
