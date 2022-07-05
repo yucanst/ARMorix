@@ -20,14 +20,21 @@ function Type({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <View style={styles.iconContainer}>
-                <Icon style={styles.icon} name='camera-outline' onPress={() => selectType('back')} />
-                <Text style={styles.text}>Scenery</Text>
+            <View style={styles.topContainer}>
+                <Text style={styles.title}>Select your{'\n'}Camera</Text>
+                <Text style={styles.description}>take the image in your{'\n'}desired camera mode!</Text>
             </View>
 
-            <View style={styles.iconContainer}>
-                <Icon style={styles.icon} name='camera-reverse-outline' onPress={() => selectType('front')} />
-                <Text style={styles.text}>Selfie</Text>
+            <View style={styles.bottomContainer}>
+                <TouchableOpacity style={styles.iconContainer} onPress={() => selectType('back')}>
+                    <Icon style={{ fontSize: 66 }} name='camera-outline' />
+                    <Text style={styles.label}>Scenery</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.iconContainer} onPress={() => selectType('front')}>
+                    <Icon style={{ fontSize: 66 }} name='camera-reverse-outline' />
+                    <Text style={styles.label}>Selfie</Text>
+                </TouchableOpacity>
             </View>
         </View>
     )
@@ -116,24 +123,45 @@ function Review({ navigation }) {
 
 export { Type, Application, Review }
 const styles = StyleSheet.create({
-    container: {
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        flex: 1,
-        justifyContent: 'center'
-    },
-
     // Type
-    iconContainer: {
+    container: {
+        backgroundColor: '#fafafa',
+        flex: 1
+    },
+    topContainer: {
+        height: '25%',
+        justifyContent: 'center',
+        marginTop: 45,
+        paddingLeft: 45
+    },
+    title: {
+        fontWeight: 'bold',
+        fontSize: 25
+    },
+    description: {
+        fontSize: 18,
+        paddingTop: 15,
+        paddingBottom: 15
+    },
+    bottomContainer: {
         alignItems: 'center',
         textAlign: 'center',
-        paddingBottom: 30
+        width: '100%'
     },
-    icon: {
-        fontSize: 66
+    iconContainer: {
+        alignItems: 'center',
+        backgroundColor: '#ffffff',
+        border: '1px solid black',
+        borderRadius: 30,
+        height: 200,
+        justifyContent: 'center',
+        marginBottom: 50,
+        width: '80%'
     },
-    text: {
-        fontSize: 18
+    label: {
+        fontSize: 18,
+        fontStyle: 'italic',
+        paddingTop: 10
     },
 
     // Camera
