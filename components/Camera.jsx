@@ -5,6 +5,7 @@ import { AutoFocus, Camera, CameraType, FlashMode } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 
 let camType = CameraType.back;
+let camOrientation = 'portrait';
 
 // Component to select front/back camera
 function Type({ navigation }) {
@@ -40,8 +41,41 @@ function Type({ navigation }) {
     )
 };
 
+// Component to select portrait/landscape mode
+function Orientation({ navigation }) {
+    function selectOrientation(orientation) {
+        // Default orientation is portrait - send instructions to arm if user selects landscape (?)
+        if (orientation === 'landscape') {
+            camOrientation = 'landscape';
+        }
+
+        navigation.navigate('Camera');
+    }
+
+    return (
+        <View style={styles.container}>
+            <View style={styles.topContainer}>
+                <Text style={styles.title}>Select your{'\n'}Orientation</Text>
+                <Text style={styles.description}>take the image in your{'\n'}desired orientation!</Text>
+            </View>
+
+            <View style={styles.bottomContainer}>
+                <TouchableOpacity style={styles.iconContainer} onPress={() => selectOrientation('portrait')}>
+                    <Icon style={{ fontSize: 66 }} name='phone-portrait-outline' />
+                    <Text style={styles.label}>Portrait</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.iconContainer} onPress={() => selectOrientation('landscape')}>
+                    <Icon style={{ fontSize: 66 }} name='phone-landscape-outline' />
+                    <Text style={styles.label}>Landscape</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    )
+};
+
 // Component that contains camera features
-function Application({ navigation }) {
+function Cam({ navigation }) {
     const cameraRef = useRef();
     const [mediaLibraryPermission, setMediaLibraryPermission] = useState(false);
     const [cameraPermission, setCameraPermission] = useState(false);
@@ -120,10 +154,10 @@ function Application({ navigation }) {
     )
 };
 
-export { Type, Application };
+export { Type, Orientation, Cam };
 
 const styles = StyleSheet.create({
-    // Type
+    // Type + Orientation
     container: {
         backgroundColor: '#fafafa',
         flex: 1
