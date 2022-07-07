@@ -1,45 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Button, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AutoFocus, Camera, CameraType, FlashMode } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 
-let camType = CameraType.back;
 let camOrientation = 'portrait';
-
-// Component to select front/back camera
-function Type({ navigation }) {
-    function selectType(type) {
-        if (type === 'front') {
-            camType = CameraType.front;
-        } else {
-            camType = CameraType.back;
-        }
-
-        navigation.navigate('Orientation');
-    }
-
-    return (
-        <View style={styles.container}>
-            <View style={styles.topContainer}>
-                <Text style={styles.title}>Select your{'\n'}Camera</Text>
-                <Text style={styles.description}>take the image in your{'\n'}desired camera mode!</Text>
-            </View>
-
-            <View style={styles.bottomContainer}>
-                <TouchableOpacity style={styles.iconContainer} onPress={() => selectType('back')}>
-                    <Icon style={{ fontSize: 66 }} name='camera-outline' />
-                    <Text style={styles.label}>Scenery</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.iconContainer} onPress={() => selectType('front')}>
-                    <Icon style={{ fontSize: 66 }} name='camera-reverse-outline' />
-                    <Text style={styles.label}>Selfie</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    )
-};
 
 // Component to select portrait/landscape mode
 function Orientation({ navigation }) {
@@ -50,7 +15,7 @@ function Orientation({ navigation }) {
         }
 
         navigation.navigate('Camera');
-    }
+    };
 
     return (
         <View style={styles.container}>
@@ -71,7 +36,7 @@ function Orientation({ navigation }) {
                 </TouchableOpacity>
             </View>
         </View>
-    )
+    );
 };
 
 // Component that contains camera features
@@ -82,8 +47,9 @@ function Cam({ navigation }) {
     const [image, setImage] = useState();
 
     // Camera settings
-    const [flash, setFlash] = useState(FlashMode.off)
-    const [zoom, setZoom] = useState(0)
+    const [type, setType] = useState(CameraType.back);
+    const [flash, setFlash] = useState(FlashMode.off);
+    const [zoom, setZoom] = useState(0);
 
     useEffect(() => {
         (async () => {
@@ -95,69 +61,50 @@ function Cam({ navigation }) {
     }, []);
 
     if (!cameraPermission) {
-        return <Text>Please allow camera permission in settings.</Text>;
-    }
+        return <Text>Please allow Camera permission in Settings.</Text>
+    };
+
+    if (!mediaLibraryPermission) {
+        return <Text>Please allow Gallery permission in Settings.</Text>
+    };
 
     async function captureImage() {
-        const options = { quality: 1, skipProcessing: false }
+        const options = { quality: 1, skipProcessing: false };
 
         try {
             const newImage = await cameraRef.current.takePictureAsync(options);
-            setImage(newImage);
+            MediaLibrary.saveToLibraryAsync(newImage.uri);
+            Alert.alert('Success', 'Image has been saved!');
+            navigation.navigate("Orientation");
         } catch (err) {
             console.log(err);
-        }
-    }
-
-    // Review once image is captured
-    if (image) {
-        function shareImage() {
-            // Instagram API
-        }
-
-        function saveImage() {
-            try {
-                MediaLibrary.saveToLibraryAsync(image.uri).then(() => {
-                    setImage(undefined);
-                })
-            } catch (err) {
-                console.log(err);
-            }
-        }
-
-        return (
-            <View style={styles.previewContainer}>
-                <Icon style={styles.social} name='share-social-outline' />
-                <Image style={styles.preview} source={{ uri: image.uri }} />
-                {mediaLibraryPermission ? <Button title="Save" color="#212121" onPress={() => saveImage()} /> : undefined}
-                <Button title="Retake" color="#212121" onPress={() => setImage(undefined)} />
-            </View>
-        )
-    }
+        };
+    };
 
     return (
-        <Camera
-            style={{ flex: 1 }}
-            type={camType}
-            ref={cameraRef}
-            autoFocus={AutoFocus.on}
-            flashMode={flash}
-            zoom={zoom}
-        >
-            <View style={{ backgroundColor: 'transparent', flex: 1, flexDirection: 'row', margin: 20 }}>
-                <TouchableOpacity style={{ alignItems: 'center', alignSelf: 'flex-end' }}
-                    onPress={() => captureImage()}>
-                    <Text style={{ color: 'white', fontSize: 18 }}>Capture</Text>
-                </TouchableOpacity>
+        <Camera style={{ flex: 1 }} ref={cameraRef} type={type} flashMode={flash} zoom={zoom} autoFocus={AutoFocus.on}>
+            <View style={styles.camtainer}>
+                {flash === FlashMode.on ?
+                    <Icon style={[styles.icon, { color: '#ffd700' }]} name='flash-outline' onPress={() => setFlash(FlashMode.off)} /> :
+                    <Icon style={styles.icon} name='flash-off-outline' onPress={() => setFlash(FlashMode.on)} />
+                }
+            </View>
+
+            <View style={[styles.camtainer, { bottom: 0 }]}>
+                <Icon style={styles.icon} name='videocam-outline' />
+                <Icon style={[styles.icon, { fontSize: 45 }]} name='md-radio-button-on-outline' onPress={() => captureImage()} />
+                <Icon style={styles.icon} name='camera-reverse-outline' onPress={() => {
+                    setType(type === CameraType.back ? CameraType.front : CameraType.back);
+                }} />
             </View>
         </Camera>
-    )
+    );
 };
 
-export { Type, Orientation, Cam };
+export { Orientation, Cam };
 
 const styles = StyleSheet.create({
-    // Type + Orientation
+    // Orientation
     container: {
         backgroundColor: '#fafafa',
         flex: 1
@@ -190,7 +137,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         height: 200,
         justifyContent: 'center',
-        marginBottom: 50,
+        marginBottom: 33,
         width: '80%'
     },
     label: {
@@ -200,22 +147,22 @@ const styles = StyleSheet.create({
     },
 
     // Camera
-
-    // Review
-    previewContainer: {
+    camtainer: {
         alignItems: 'center',
-        justifyContent: 'center',
-        flex: 1
+        backgroundColor: '#000000',
+        flex: 1,
+        flexDirection: 'row',
+        height: 70,
+        opacity: 0.5,
+        position: 'absolute',
+        width: '100%'
     },
-    preview: {
-        alignSelf: 'stretch',
-        flex: 1
-    },
-    social: {
-        alignSelf: 'flex-end',
-        fontSize: 30,
-        marginBottom: 30,
-        marginRight: 25,
-        marginTop: 15
+    icon: {
+        color: '#ffffff',
+        flex: 1,
+        fontSize: 25,
+        textAlign: 'center'
     }
+
+    // Edit - to be confirmed
 });
