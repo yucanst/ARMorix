@@ -63,7 +63,7 @@ export default function Main() {
     };
 
     return (
-        <Camera style={[styles.cam, { height: 250, width: width }]} ref={backCamRef} flashMode={flash} zoom={zoom} autoFocus='on' type='back'>
+        <Camera style={[styles.cam, { height: height, width: width }]} ref={backCamRef} flashMode={flash} zoom={zoom} autoFocus='on' type='back'>
             <View style={styles.camtainer}>
                 <MaterialIcon style={styles.icon} name='zoom-out' onPress={() => updateZoom('out')} />
                 <MaterialIcon style={styles.icon} name='zoom-in' onPress={() => updateZoom('in')} />
