@@ -90,7 +90,7 @@ export default function Main() {
 
     return (
         <Camera
-            style={styles.cam} ref={cameraRef} flashMode={flash} zoom={zoom}
+            style={styles.cam} ref={cameraRef} flashMode={flash}
             autoFocus='on' type='front' onFacesDetected={handleFacesDetected}
             faceDetectorSettings={{
                 detectLandmarks: FaceDetector.FaceDetectorLandmarks.all,
