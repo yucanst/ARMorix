@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import IonIcon from 'react-native-vector-icons/Ionicons';
-import { Alert, Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Camera } from 'expo-camera';
+import * as FaceDetector from 'expo-face-detector';
 import * as MediaLibrary from 'expo-media-library';
 
 const windowHeight = Dimensions.get('window').height;
@@ -10,42 +10,68 @@ const windowWidth = Dimensions.get('window').width;
 
 // Component that contains camera features
 export default function Main() {
-    const backCamRef = useRef();
+    const cameraRef = useRef();
     const [cameraPermission, setCameraPermission] = useState(false);
     const [mediaLibraryPermission, setMediaLibraryPermission] = useState(false);
 
     // Camera settings
-    const [height, setHeight] = useState(windowHeight);
-    const [width, setWidth] = useState(windowWidth);
     const [flash, setFlash] = useState('off');
-    const [zoom, setZoom] = useState(0);
+
+    // Tracking settings
+    const blinkArr = useRef([]);
+    const blinkCounter = useRef(0);
+    const [blink, setBlink] = useState(0);
+    const [blinkTime, setBlinkTime] = useState();
 
     // Arm settings
     const [orientation, setOrientation] = useState('portrait');
 
     const updateOrientation = () => {
         orientation === 'portrait' ? setOrientation('landscape') : setOrientation('portrait');
-        setHeight(width);
-        setWidth(height);
-    };
-
-    const updateZoom = op => {
-        if (op === 'out' && zoom > 0) {
-            setZoom(zoom - 0.1);
-        } else if (op === 'in' && zoom < 1) {
-            setZoom(zoom + 0.1);
-        }
     };
 
     const captureImage = async () => {
         const options = { quality: 1, skipProcessing: false };
-
         try {
-            const newImage = await backCamRef.current.takePictureAsync(options);
+            const newImage = await cameraRef.current.takePictureAsync(options);
             MediaLibrary.saveToLibraryAsync(newImage.uri);
-            Alert.alert('Success', 'Image has been saved!');
         } catch (err) {
             console.log(err);
+        }
+    };
+
+    const handleFacesDetected = ({ faces }) => {
+        if (faces.length === 0) {
+            setBlink(0);
+        } else {
+            faces.map((f, i) => {
+                const currentTime = new Date().getTime();
+                const closeEye = f.leftEyeOpenProbability < 0.33 && f.rightEyeOpenProbability < 0.33;
+
+                if (blinkArr.current.length >= 5) {
+                    blinkArr.current.shift()
+                }
+                blinkArr.current.push(closeEye);
+
+                if (blink > 0 && currentTime - blinkTime > 1500) {
+                    setBlink(0);
+                } else if (blinkCounter.current === 0 && blinkArr.current[0] === false && blinkArr.current[2] === true && blinkArr.current[4] === false) {
+                    setBlink(blink + 1);
+                    setBlinkTime(currentTime);
+                    blinkCounter.current = 1;
+                }
+
+                if (blinkCounter.current >= 1 && blinkCounter.current < 6) {
+                    blinkCounter.current += 1;
+                } else {
+                    blinkCounter.current = 0;
+                }
+
+                if (blink === 3) {
+                    setBlink(0);
+                    captureImage();
+                }
+            });
         }
     };
 
@@ -63,13 +89,18 @@ export default function Main() {
     };
 
     return (
-        <Camera style={[styles.cam, { height: height, width: width }]} ref={backCamRef} flashMode={flash} zoom={zoom} autoFocus='on' type='back'>
+        <Camera
+            style={styles.cam} ref={cameraRef} flashMode={flash} zoom={zoom}
+            autoFocus='on' type='front' onFacesDetected={handleFacesDetected}
+            faceDetectorSettings={{
+                detectLandmarks: FaceDetector.FaceDetectorLandmarks.all,
+                minDetectionInterval: 60,
+                mode: FaceDetector.FaceDetectorMode.fast,
+                runClassifications: FaceDetector.FaceDetectorClassifications.all,
+                tracking: true
+            }}
+        >
             <View style={styles.camtainer}>
-                <MaterialIcon style={styles.icon} name='zoom-out' onPress={() => updateZoom('out')} />
-                <MaterialIcon style={styles.icon} name='zoom-in' onPress={() => updateZoom('in')} />
-            </View>
-
-            <View style={[styles.camtainer, { bottom: 0 }]}>
                 {flash === 'on' ?
                     <IonIcon style={[styles.icon, { color: '#ffd700' }]} name='flash-outline' onPress={() => setFlash('off')} /> :
                     <IonIcon style={styles.icon} name='flash-off-outline' onPress={() => setFlash('on')} />
@@ -84,14 +115,17 @@ export default function Main() {
 const styles = StyleSheet.create({
     cam: {
         flex: 1,
-        position: 'absolute'
+        height: windowHeight,
+        position: 'absolute',
+        width: windowWidth
     },
     camtainer: {
         alignItems: 'center',
         backgroundColor: '#000000',
+        bottom: 0,
         flex: 1,
         flexDirection: 'row',
-        height: 70,
+        height: 75,
         opacity: 0.5,
         position: 'absolute',
         width: '100%',
