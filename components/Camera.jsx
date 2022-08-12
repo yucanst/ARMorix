@@ -5,17 +5,19 @@ import { Camera } from 'expo-camera';
 import * as FaceDetector from 'expo-face-detector';
 import * as MediaLibrary from 'expo-media-library';
 
-const windowHeight = Dimensions.get('window').height;
-const windowWidth = Dimensions.get('window').width;
-
-// Component that contains camera features
 export default function Main() {
+    // Application settings
     const cameraRef = useRef();
     const [cameraPermission, setCameraPermission] = useState(false);
     const [mediaLibraryPermission, setMediaLibraryPermission] = useState(false);
+    const [windowHeight, setWindowHeight] = useState(Dimensions.get('window').height);
+    const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
 
     // Camera settings
     const [flash, setFlash] = useState('off');
+
+    // Arm settings
+    const [orientation, setOrientation] = useState('portrait');
 
     // Tracking settings
     const blinkArr = useRef([]);
@@ -23,54 +25,77 @@ export default function Main() {
     const [blink, setBlink] = useState(0);
     const [blinkTime, setBlinkTime] = useState();
 
-    // Arm settings
-    const [orientation, setOrientation] = useState('portrait');
-
-    const updateOrientation = () => {
-        orientation === 'portrait' ? setOrientation('landscape') : setOrientation('portrait');
-    };
-
     const captureImage = async () => {
         const options = { quality: 1, skipProcessing: false };
         try {
             const newImage = await cameraRef.current.takePictureAsync(options);
             MediaLibrary.saveToLibraryAsync(newImage.uri);
+            setBlink(0);
         } catch (err) {
             console.log(err);
+        }
+    };
+
+    const updateOrientation = () => {
+        orientation === 'portrait' ? setOrientation('landscape') : setOrientation('portrait');
+        // setWindowHeight(windowWidth);
+        // setWindowWidth(windowHeight);
+    };
+
+    const handleDirection = (leftEyeOpenProbability, rightEyeOpenProbability, smilingProbability) => {
+        const moveUp = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.4 && smilingProbability > 0.7;
+        const moveDown = leftEyeOpenProbability > 0.4 && rightEyeOpenProbability < 0.4 && smilingProbability > 0.7;
+        const moveLeft = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.7 && smilingProbability < 0.4;
+        const moveRight = leftEyeOpenProbability > 0.7 && rightEyeOpenProbability < 0.4 && smilingProbability < 0.4;
+
+        if (moveUp) {
+            return 'up';
+        } else if (moveDown) {
+            return 'down';
+        } else if (moveLeft) {
+            return 'left';
+        } else if (moveRight) {
+            return 'right';
+        } else {
+            return 'center';
+        }
+    };
+
+    const handleBlink = (leftEyeOpenProbability, rightEyeOpenProbability) => {
+        const closeEye = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability < 0.4;
+        const currentTime = new Date().getTime();
+
+        if (blinkArr.current.length >= 5) {
+            blinkArr.current.shift()
+        }
+        blinkArr.current.push(closeEye);
+
+        if (blink > 0 && currentTime - blinkTime > 1200) {
+            setBlink(0);
+        } else if (blinkCounter.current === 0 && blinkArr.current[0] === false && blinkArr.current[2] && blinkArr.current[4] === false) {
+            setBlink(blink + 1);
+            setBlinkTime(currentTime);
+            blinkCounter.current = 1;
+        }
+
+        if (blinkCounter.current >= 1 && blinkCounter.current < 6) {
+            blinkCounter.current += 1;
+        } else {
+            blinkCounter.current = 0;
+        }
+
+        if (blink >= 3) {
+            captureImage();
         }
     };
 
     const handleFacesDetected = ({ faces }) => {
         if (faces.length === 0) {
             setBlink(0);
-        } else {
-            faces.map((f, i) => {
-                const currentTime = new Date().getTime();
-                const closeEye = f.leftEyeOpenProbability < 0.33 && f.rightEyeOpenProbability < 0.33;
-
-                if (blinkArr.current.length >= 5) {
-                    blinkArr.current.shift()
-                }
-                blinkArr.current.push(closeEye);
-
-                if (blink > 0 && currentTime - blinkTime > 1500) {
-                    setBlink(0);
-                } else if (blinkCounter.current === 0 && blinkArr.current[0] === false && blinkArr.current[2] === true && blinkArr.current[4] === false) {
-                    setBlink(blink + 1);
-                    setBlinkTime(currentTime);
-                    blinkCounter.current = 1;
-                }
-
-                if (blinkCounter.current >= 1 && blinkCounter.current < 6) {
-                    blinkCounter.current += 1;
-                } else {
-                    blinkCounter.current = 0;
-                }
-
-                if (blink === 3) {
-                    setBlink(0);
-                    captureImage();
-                }
+        } else if (faces.length === 1) {
+            return faces.map((face, index) => {
+                handleBlink(face.leftEyeOpenProbability, face.rightEyeOpenProbability);
+                handleDirection(face.leftEyeOpenProbability, face.rightEyeOpenProbability, face.smilingProbability);
             });
         }
     };
@@ -90,8 +115,8 @@ export default function Main() {
 
     return (
         <Camera
-            style={styles.cam} ref={cameraRef} flashMode={flash}
-            autoFocus='on' type='front' onFacesDetected={handleFacesDetected}
+            style={[styles.cam, { height: windowHeight, width: windowWidth }]} ref={cameraRef} flashMode={flash}
+            autoFocus={Camera.Constants.AutoFocus.on} type={Camera.Constants.Type.front} onFacesDetected={handleFacesDetected}
             faceDetectorSettings={{
                 detectLandmarks: FaceDetector.FaceDetectorLandmarks.all,
                 minDetectionInterval: 60,
@@ -115,9 +140,7 @@ export default function Main() {
 const styles = StyleSheet.create({
     cam: {
         flex: 1,
-        height: windowHeight,
-        position: 'absolute',
-        width: windowWidth
+        position: 'absolute'
     },
     camtainer: {
         alignItems: 'center',
