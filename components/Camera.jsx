@@ -42,19 +42,19 @@ export default function Main() {
         // setWindowWidth(windowHeight);
     };
 
-    const handleDirection = (leftEyeOpenProbability, rightEyeOpenProbability, smilingProbability) => {
+    const handleDirection = (leftEyePosition, rightEyePosition, leftEyeOpenProbability, rightEyeOpenProbability, smilingProbability) => {
         const moveUp = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.4 && smilingProbability > 0.7;
         const moveDown = leftEyeOpenProbability > 0.4 && rightEyeOpenProbability < 0.4 && smilingProbability > 0.7;
         const moveLeft = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.7 && smilingProbability < 0.4;
         const moveRight = leftEyeOpenProbability > 0.7 && rightEyeOpenProbability < 0.4 && smilingProbability < 0.4;
 
-        if (moveUp) {
+        if (moveUp && leftEyePosition.y < windowHeight - 10 && rightEyePosition.y < windowHeight - 10) {
             return 'up';
-        } else if (moveDown) {
+        } else if (moveDown && leftEyePosition.y > 10 && rightEyePosition.y > 10) {
             return 'down';
-        } else if (moveLeft) {
+        } else if (moveLeft && rightEyePosition.x < windowWidth - 10) {
             return 'left';
-        } else if (moveRight) {
+        } else if (moveRight && leftEyePosition.x > 10) {
             return 'right';
         } else {
             return 'center';
@@ -95,7 +95,7 @@ export default function Main() {
         } else if (faces.length === 1) {
             return faces.map((face, index) => {
                 handleBlink(face.leftEyeOpenProbability, face.rightEyeOpenProbability);
-                handleDirection(face.leftEyeOpenProbability, face.rightEyeOpenProbability, face.smilingProbability);
+                handleDirection(face.leftEyePosition, face.rightEyePosition, face.leftEyeOpenProbability, face.rightEyeOpenProbability, face.smilingProbability);
             });
         }
     };
