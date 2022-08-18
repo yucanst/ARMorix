@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import IonIcon from 'react-native-vector-icons/Ionicons';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Camera } from 'expo-camera';
 import * as FaceDetector from 'expo-face-detector';
@@ -14,7 +14,7 @@ export default function Main() {
     const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
 
     // Camera settings
-    const [flash, setFlash] = useState('off');
+    const [direction, setDirection] = useState('center');
 
     // Arm settings
     const [orientation, setOrientation] = useState('portrait');
@@ -26,11 +26,9 @@ export default function Main() {
     const [blinkTime, setBlinkTime] = useState();
 
     const captureImage = async () => {
-        const options = { quality: 1, skipProcessing: false };
         try {
-            const newImage = await cameraRef.current.takePictureAsync(options);
+            const newImage = await cameraRef.current.takePictureAsync({ quality: 1, skipProcessing: false });
             MediaLibrary.saveToLibraryAsync(newImage.uri);
-            setBlink(0);
         } catch (err) {
             console.log(err);
         }
@@ -42,29 +40,34 @@ export default function Main() {
         // setWindowWidth(windowHeight);
     };
 
-    const handleDirection = (leftEyePosition, rightEyePosition, leftEyeOpenProbability, rightEyeOpenProbability, smilingProbability) => {
-        const moveUp = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.4 && smilingProbability > 0.7;
-        const moveDown = leftEyeOpenProbability > 0.4 && rightEyeOpenProbability < 0.4 && smilingProbability > 0.7;
-        const moveLeft = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.7 && smilingProbability < 0.4;
-        const moveRight = leftEyeOpenProbability > 0.7 && rightEyeOpenProbability < 0.4 && smilingProbability < 0.4;
-
-        if (moveUp && leftEyePosition.y < windowHeight - 10 && rightEyePosition.y < windowHeight - 10) {
-            return 'up';
-        } else if (moveDown && leftEyePosition.y > 10 && rightEyePosition.y > 10) {
-            return 'down';
-        } else if (moveLeft && rightEyePosition.x < windowWidth - 10) {
-            return 'left';
-        } else if (moveRight && leftEyePosition.x > 10) {
-            return 'right';
-        } else {
-            return 'center';
-        }
-    };
-
-    const handleBlink = (leftEyeOpenProbability, rightEyeOpenProbability) => {
+    const handleCloseEye = (leftEyePosition, rightEyePosition, leftEyeOpenProbability, rightEyeOpenProbability, smilingProbability) => {
         const closeEye = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability < 0.4;
         const currentTime = new Date().getTime();
 
+        // Handle direction
+        if (!closeEye) {
+            const moveUp = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.4 && smilingProbability > 0.7;
+            const moveDown = leftEyeOpenProbability > 0.4 && rightEyeOpenProbability < 0.4 && smilingProbability > 0.7;
+            const moveLeft = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.4 && smilingProbability < 0.7;
+            const moveRight = leftEyeOpenProbability > 0.4 && rightEyeOpenProbability < 0.4 && smilingProbability < 0.7;
+
+            if (!moveUp && !moveDown && !moveLeft && !moveRight) {
+                setDirection('center');
+            } else {
+                setBlink(0);
+                if (moveUp && leftEyePosition.y < windowHeight - 10 && rightEyePosition.y < windowHeight - 10) {
+                    setDirection('up');
+                } else if (moveDown && leftEyePosition.y > 10 && rightEyePosition.y > 10) {
+                    setDirection('down');
+                } else if (moveLeft && rightEyePosition.x < windowWidth - 10) {
+                    setDirection('left');
+                } else if (moveRight && leftEyePosition.x > 10) {
+                    setDirection('right');
+                }
+            }
+        }
+
+        // Handle blink
         if (blinkArr.current.length >= 5) {
             blinkArr.current.shift()
         }
@@ -84,7 +87,8 @@ export default function Main() {
             blinkCounter.current = 0;
         }
 
-        if (blink >= 3) {
+        if (blink === 3) {
+            setBlink(0);
             captureImage();
         }
     };
@@ -93,9 +97,8 @@ export default function Main() {
         if (faces.length === 0) {
             setBlink(0);
         } else if (faces.length === 1) {
-            return faces.map((face, index) => {
-                handleBlink(face.leftEyeOpenProbability, face.rightEyeOpenProbability);
-                handleDirection(face.leftEyePosition, face.rightEyePosition, face.leftEyeOpenProbability, face.rightEyeOpenProbability, face.smilingProbability);
+            faces.map((face, index) => {
+                handleCloseEye(face.leftEyePosition, face.rightEyePosition, face.leftEyeOpenProbability, face.rightEyeOpenProbability, face.smilingProbability);
             });
         }
     };
@@ -115,7 +118,7 @@ export default function Main() {
 
     return (
         <Camera
-            style={[styles.cam, { height: windowHeight, width: windowWidth }]} ref={cameraRef} flashMode={flash}
+            style={[styles.cam, { height: windowHeight, width: windowWidth }]} ref={cameraRef}
             autoFocus={Camera.Constants.AutoFocus.on} type={Camera.Constants.Type.front} onFacesDetected={handleFacesDetected}
             faceDetectorSettings={{
                 detectLandmarks: FaceDetector.FaceDetectorLandmarks.all,
@@ -126,12 +129,13 @@ export default function Main() {
             }}
         >
             <View style={styles.camtainer}>
-                {flash === 'on' ?
-                    <IonIcon style={[styles.icon, { color: '#ffd700' }]} name='flash-outline' onPress={() => setFlash('off')} /> :
-                    <IonIcon style={styles.icon} name='flash-off-outline' onPress={() => setFlash('on')} />
-                }
-                <IonIcon style={[styles.icon, { fontSize: 50 }]} name='md-radio-button-on-outline' onPress={captureImage} />
-                <IonIcon style={styles.icon} name={orientation === 'portrait' ? 'phone-landscape-outline' : 'phone-portrait-outline'} onPress={updateOrientation} />
+                {direction === 'center' && <Icon style={styles.icon} />}
+                {direction === 'up' && <Icon style={styles.icon} name='arrow-up-outline' />}
+                {direction === 'down' && <Icon style={styles.icon} name='arrow-down-outline' />}
+                {direction === 'left' && <Icon style={styles.icon} name='arrow-back-outline' />}
+                {direction === 'right' && <Icon style={styles.icon} name='arrow-forward-outline' />}
+                <Text style={[styles.icon, { fontSize: 45 }]}>{blink}</Text>
+                <Icon style={styles.icon} name={orientation === 'portrait' ? 'phone-landscape-outline' : 'phone-portrait-outline'} onPress={updateOrientation} />
             </View>
         </Camera>
     );
@@ -157,7 +161,10 @@ const styles = StyleSheet.create({
     icon: {
         color: '#ffffff',
         flex: 1,
-        fontSize: 25,
+        fontSize: 30,
         textAlign: 'center'
+    },
+    preview: {
+        opacity: 0
     }
 });
