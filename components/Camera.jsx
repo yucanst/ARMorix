@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { Camera } from 'expo-camera';
 import * as FaceDetector from 'expo-face-detector';
 import * as MediaLibrary from 'expo-media-library';
@@ -14,6 +14,7 @@ export default function Main() {
     const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
 
     // Camera settings
+    const [image, setImage] = useState(false);
     const [direction, setDirection] = useState('center');
 
     // Arm settings
@@ -29,6 +30,7 @@ export default function Main() {
         try {
             const newImage = await cameraRef.current.takePictureAsync({ quality: 1, skipProcessing: false });
             MediaLibrary.saveToLibraryAsync(newImage.uri);
+            setImage(newImage.uri);
         } catch (err) {
             console.log(err);
         }
@@ -38,6 +40,10 @@ export default function Main() {
         orientation === 'portrait' ? setOrientation('landscape') : setOrientation('portrait');
         // setWindowHeight(windowWidth);
         // setWindowWidth(windowHeight);
+    };
+
+    const handlePreview = () => {
+        setInterval(() => setImage(false), 500);
     };
 
     const handleCloseEye = (leftEyePosition, rightEyePosition, leftEyeOpenProbability, rightEyeOpenProbability, smilingProbability) => {
@@ -114,6 +120,10 @@ export default function Main() {
 
     if (!cameraPermission || !mediaLibraryPermission) {
         return <Text>Please allow Camera and Gallery permissions in Settings.</Text>
+    };
+
+    if (image) {
+        return <Image style={[styles.preview, { height: windowHeight, width: windowWidth }]} source={{ uri: image }} onLoadStart={handlePreview} />
     };
 
     return (
