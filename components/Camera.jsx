@@ -23,6 +23,7 @@ export default function Main() {
     // Tracking settings
     const blinkArr = useRef([]);
     const blinkCounter = useRef(0);
+    const winkCounter = useRef(0);
     const [blink, setBlink] = useState(0);
     const [blinkTime, setBlinkTime] = useState();
 
@@ -46,26 +47,21 @@ export default function Main() {
         setInterval(() => setImage(false), 500);
     };
 
-    const handleCloseEye = (leftEyePosition, rightEyePosition, leftEyeOpenProbability, rightEyeOpenProbability, smilingProbability) => {
+    const handleCloseEye = (leftEyePosition, rightEyePosition, leftEyeOpenProbability, rightEyeOpenProbability) => {
         const closeEye = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability < 0.4;
         const currentTime = new Date().getTime();
 
         // Handle direction
         if (!closeEye) {
-            const moveUp = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.4 && smilingProbability > 0.7;
-            const moveDown = leftEyeOpenProbability > 0.4 && rightEyeOpenProbability < 0.4 && smilingProbability > 0.7;
-            const moveLeft = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.4 && smilingProbability < 0.7;
-            const moveRight = leftEyeOpenProbability > 0.4 && rightEyeOpenProbability < 0.4 && smilingProbability < 0.7;
+            const moveLeft = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.4;
+            const moveRight = leftEyeOpenProbability > 0.4 && rightEyeOpenProbability < 0.4;
 
-            if (!moveUp && !moveDown && !moveLeft && !moveRight) {
+            if (!moveLeft && !moveRight) {
                 setDirection('center');
-            } else {
+            } else if (winkCounter.current === 0) {
                 setBlink(0);
-                if (moveUp && leftEyePosition.y < windowHeight - 10 && rightEyePosition.y < windowHeight - 10) {
-                    setDirection('up');
-                } else if (moveDown && leftEyePosition.y > 10 && rightEyePosition.y > 10) {
-                    setDirection('down');
-                } else if (moveLeft && rightEyePosition.x < windowWidth - 10) {
+                winkCounter.current = 1;
+                if (moveLeft && rightEyePosition.x < windowWidth - 10) {
                     setDirection('left');
                 } else if (moveRight && leftEyePosition.x > 10) {
                     setDirection('right');
@@ -73,9 +69,15 @@ export default function Main() {
             }
         }
 
+        if (winkCounter.current >= 1 && winkCounter.current < 20) {
+            winkCounter.current += 1;
+        } else {
+            winkCounter.current = 0;
+        }
+
         // Handle blink
         if (blinkArr.current.length >= 5) {
-            blinkArr.current.shift()
+            blinkArr.current.shift();
         }
         blinkArr.current.push(closeEye);
 
@@ -104,7 +106,7 @@ export default function Main() {
             setBlink(0);
         } else if (faces.length === 1) {
             faces.map((face, index) => {
-                handleCloseEye(face.leftEyePosition, face.rightEyePosition, face.leftEyeOpenProbability, face.rightEyeOpenProbability, face.smilingProbability);
+                handleCloseEye(face.leftEyePosition, face.rightEyePosition, face.leftEyeOpenProbability, face.rightEyeOpenProbability);
             });
         }
     };
