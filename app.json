@@ -33,10 +33,10 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "package": "mecit-camera",
-        "versionCode": 1
-      }
+        "foregroundImage": "./assets/adaptive-icon.png"
+      },
+      "package": "mecit-camera",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
