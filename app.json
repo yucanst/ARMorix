@@ -26,7 +26,7 @@
       "**/*"
     ],
     "ios": {
-      "bundleIdentifier": "mecit-camera",
+      "bundleIdentifier": "com.mecit.camera",
       "buildNumber": "1.0.0",
       "supportsTablet": false
     },
@@ -35,7 +35,7 @@
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/adaptive-icon.png"
       },
-      "package": "mecit-camera",
+      "package": "com.mecit.camera",
       "versionCode": 1
     },
     "web": {
