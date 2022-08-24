@@ -28,7 +28,7 @@
     "ios": {
       "bundleIdentifier": "mecit-camera",
       "buildNumber": "1.0.0",
-      "supportsTablet": true
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
