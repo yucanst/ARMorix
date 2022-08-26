@@ -15,17 +15,28 @@ export default function Main() {
 
     // Camera settings
     const [image, setImage] = useState(false);
-    const [direction, setDirection] = useState('center');
+    const [currentElement, setCurrentElement] = useState('orientation');
 
     // Arm settings
     const [orientation, setOrientation] = useState('portrait');
 
     // Tracking settings
-    const blinkArr = useRef([]);
+    const leftEyeCloseArray = useRef([]);
+    const rightEyeCloseArray = useRef([]);
     const blinkCounter = useRef(0);
     const winkCounter = useRef(0);
     const [blink, setBlink] = useState(0);
-    const [blinkTime, setBlinkTime] = useState();
+    const [blinkTime, setBlinkTime] = useState(0);
+    const [winkTime, setWinkTime] = useState(0);
+
+    const invokeOption = () => {
+        setBlink(0);
+        if (currentElement === 'orientation') {
+            updateOrientation();
+        } else if (currentElement === 'photo') {
+            captureImage();
+        }
+    };
 
     const captureImage = async () => {
         try {
@@ -39,54 +50,52 @@ export default function Main() {
 
     const updateOrientation = () => {
         orientation === 'portrait' ? setOrientation('landscape') : setOrientation('portrait');
-        // setWindowHeight(windowWidth);
-        // setWindowWidth(windowHeight);
+        setWindowHeight(windowWidth);
+        setWindowWidth(windowHeight);
     };
 
     const handlePreview = () => {
         setInterval(() => setImage(false), 500);
     };
 
-    const handleCloseEye = (leftEyePosition, rightEyePosition, leftEyeOpenProbability, rightEyeOpenProbability) => {
-        const closeEye = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability < 0.4;
+    const handleCloseEye = (leftEyeOpenProbability, rightEyeOpenProbability) => {
+        const leftEyeClose = leftEyeOpenProbability < 0.4;
+        const rightEyeClose = rightEyeOpenProbability < 0.4;
         const currentTime = new Date().getTime();
 
-        // Handle direction
-        if (!closeEye) {
-            const moveLeft = leftEyeOpenProbability < 0.4 && rightEyeOpenProbability > 0.4;
-            const moveRight = leftEyeOpenProbability > 0.4 && rightEyeOpenProbability < 0.4;
-
-            if (!moveLeft && !moveRight) {
-                setDirection('center');
-            } else if (winkCounter.current === 0) {
-                setBlink(0);
-                winkCounter.current = 1;
-                if (moveLeft && rightEyePosition.x < windowWidth - 10) {
-                    setDirection('left');
-                } else if (moveRight && leftEyePosition.x > 10) {
-                    setDirection('right');
-                }
-            }
+        if (leftEyeCloseArray.current.length === 10 || rightEyeCloseArray.current.length === 10) {
+            leftEyeCloseArray.current.shift();
+            rightEyeCloseArray.current.shift();
         }
+        leftEyeCloseArray.current.push(leftEyeClose);
+        rightEyeCloseArray.current.push(rightEyeClose);
 
-        if (winkCounter.current >= 1 && winkCounter.current < 20) {
-            winkCounter.current += 1;
-        } else {
-            winkCounter.current = 0;
-        }
-
-        // Handle blink
-        if (blinkArr.current.length >= 5) {
-            blinkArr.current.shift();
-        }
-        blinkArr.current.push(closeEye);
+        const predictLeftWink = leftEyeCloseArray.current[0] === false && leftEyeCloseArray.current[4] && leftEyeCloseArray.current[9] === false;
+        const predictRightWink = rightEyeCloseArray.current[0] === false && rightEyeCloseArray.current[4] && rightEyeCloseArray.current[9] === false;
+        const predictBlink = predictLeftWink && predictRightWink;
 
         if (blink > 0 && currentTime - blinkTime > 1200) {
             setBlink(0);
-        } else if (blinkCounter.current === 0 && blinkArr.current[0] === false && blinkArr.current[2] && blinkArr.current[4] === false) {
+        } else if (predictBlink && blinkCounter.current === 0) {
             setBlink(blink + 1);
             setBlinkTime(currentTime);
             blinkCounter.current = 1;
+        }
+
+        if ((predictLeftWink || predictRightWink) && winkCounter.current === 0) {
+            if (currentTime - winkTime > 3000) {
+                if (predictLeftWink) {
+                    if (currentElement === 'photo') {
+                        setCurrentElement('orientation');
+                    }
+                } else if (predictRightWink) {
+                    if (currentElement === 'orientation') {
+                        setCurrentElement('photo');
+                    }
+                }
+                setWinkTime(currentTime);
+                winkCounter.current = 1;
+            }
         }
 
         if (blinkCounter.current >= 1 && blinkCounter.current < 6) {
@@ -95,9 +104,14 @@ export default function Main() {
             blinkCounter.current = 0;
         }
 
+        if (winkCounter.current >= 1 && winkCounter.current < 3) {
+            winkCounter.current += 1;
+        } else {
+            winkCounter.current = 0;
+        }
+
         if (blink === 3) {
-            setBlink(0);
-            captureImage();
+            invokeOption();
         }
     };
 
@@ -106,7 +120,7 @@ export default function Main() {
             setBlink(0);
         } else if (faces.length === 1) {
             faces.map((face, index) => {
-                handleCloseEye(face.leftEyePosition, face.rightEyePosition, face.leftEyeOpenProbability, face.rightEyeOpenProbability);
+                handleCloseEye(face.leftEyeOpenProbability, face.rightEyeOpenProbability);
             });
         }
     };
@@ -141,13 +155,10 @@ export default function Main() {
             }}
         >
             <View style={styles.camtainer}>
-                {direction === 'center' && <Icon style={styles.icon} />}
-                {direction === 'up' && <Icon style={styles.icon} name='arrow-up-outline' />}
-                {direction === 'down' && <Icon style={styles.icon} name='arrow-down-outline' />}
-                {direction === 'left' && <Icon style={styles.icon} name='arrow-back-outline' />}
-                {direction === 'right' && <Icon style={styles.icon} name='arrow-forward-outline' />}
+                <Icon style={currentElement === 'orientation' ? [styles.icon, { color: '#ffd700' }] : styles.icon}
+                    name={orientation === 'portrait' ? 'phone-landscape-outline' : 'phone-portrait-outline'} />
                 <Text style={[styles.icon, { fontSize: 45 }]}>{blink}</Text>
-                <Icon style={styles.icon} name={orientation === 'portrait' ? 'phone-landscape-outline' : 'phone-portrait-outline'} onPress={updateOrientation} />
+                <Icon style={currentElement === 'photo' ? [styles.icon, { color: '#ffd700' }] : styles.icon} name='camera-outline' />
             </View>
         </Camera>
     );
@@ -165,7 +176,7 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         height: 75,
-        opacity: 0.5,
+        opacity: 0.7,
         position: 'absolute',
         width: '100%',
         zIndex: 100
