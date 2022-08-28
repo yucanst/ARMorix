@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { Camera } from 'expo-camera';
+import { navigateOptions } from './Navigation';
 import * as FaceDetector from 'expo-face-detector';
 import * as MediaLibrary from 'expo-media-library';
 
@@ -24,10 +25,10 @@ export default function Main() {
     const leftEyeCloseArray = useRef([]);
     const rightEyeCloseArray = useRef([]);
     const blinkCounter = useRef(0);
+    const blinkTime = useRef(0);
     const winkCounter = useRef(0);
+    const winkTime = useRef(0);
     const [blink, setBlink] = useState(0);
-    const [blinkTime, setBlinkTime] = useState(0);
-    const [winkTime, setWinkTime] = useState(0);
 
     const invokeOption = () => {
         setBlink(0);
@@ -74,28 +75,24 @@ export default function Main() {
         const predictRightWink = rightEyeCloseArray.current[0] === false && rightEyeCloseArray.current[4] && rightEyeCloseArray.current[9] === false;
         const predictBlink = predictLeftWink && predictRightWink;
 
-        if (blink > 0 && currentTime - blinkTime > 1200) {
+        if (blink > 0 && currentTime - blinkTime.current > 1000) {
             setBlink(0);
         } else if (predictBlink && blinkCounter.current === 0) {
             setBlink(blink + 1);
-            setBlinkTime(currentTime);
+            blinkTime.current = currentTime;
             blinkCounter.current = 1;
         }
 
-        if ((predictLeftWink || predictRightWink) && winkCounter.current === 0) {
-            if (currentTime - winkTime > 3000) {
-                if (predictLeftWink) {
-                    if (currentElement === 'photo') {
-                        setCurrentElement('orientation');
-                    }
-                } else if (predictRightWink) {
-                    if (currentElement === 'orientation') {
-                        setCurrentElement('photo');
-                    }
-                }
-                setWinkTime(currentTime);
-                winkCounter.current = 1;
+        if (currentTime - winkTime.current > 1200 && winkCounter.current === 0 && !predictBlink &&
+            ((predictLeftWink && currentElement !== 'orientation') || (predictRightWink && currentElement !== 'photo'))) {
+            if (predictLeftWink) {
+                setCurrentElement(navigateOptions('left', currentElement));
+            } else if (predictRightWink) {
+                setCurrentElement(navigateOptions('right', currentElement));
             }
+            winkTime.current = currentTime;
+            winkCounter.current = 1;
+            setBlink(0);
         }
 
         if (blinkCounter.current >= 1 && blinkCounter.current < 6) {
@@ -104,7 +101,7 @@ export default function Main() {
             blinkCounter.current = 0;
         }
 
-        if (winkCounter.current >= 1 && winkCounter.current < 3) {
+        if (winkCounter.current >= 1 && winkCounter.current < 10) {
             winkCounter.current += 1;
         } else {
             winkCounter.current = 0;
