@@ -6,6 +6,9 @@ import { navigateOptions } from './Navigation';
 import * as FaceDetector from 'expo-face-detector';
 import * as MediaLibrary from 'expo-media-library';
 
+const firstElement = 'orientation';
+const lastElement = 'photo';
+
 export default function Main() {
     // Application settings
     const cameraRef = useRef();
@@ -84,7 +87,7 @@ export default function Main() {
         }
 
         if (currentTime - winkTime.current > 1200 && winkCounter.current === 0 && !predictBlink &&
-            ((predictLeftWink && currentElement !== 'orientation') || (predictRightWink && currentElement !== 'photo'))) {
+            ((predictLeftWink && currentElement !== firstElement) || (predictRightWink && currentElement !== lastElement))) {
             if (predictLeftWink) {
                 setCurrentElement(navigateOptions('left', currentElement));
             } else if (predictRightWink) {
