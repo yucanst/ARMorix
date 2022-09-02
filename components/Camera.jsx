@@ -27,10 +27,8 @@ export default function Main() {
     // Tracking settings
     const leftEyeCloseArray = useRef([]);
     const rightEyeCloseArray = useRef([]);
-    const blinkCounter = useRef(0);
+    const counter = useRef(0);
     const blinkTime = useRef(0);
-    const winkCounter = useRef(0);
-    const winkTime = useRef(0);
     const [blink, setBlink] = useState(0);
 
     const invokeOption = () => {
@@ -63,9 +61,9 @@ export default function Main() {
     };
 
     const handleCloseEye = (leftEyeOpenProbability, rightEyeOpenProbability) => {
-        const leftEyeClose = leftEyeOpenProbability < 0.4;
-        const rightEyeClose = rightEyeOpenProbability < 0.4;
         const currentTime = new Date().getTime();
+        const leftEyeClose = rightEyeOpenProbability < 0.4; // Mirror
+        const rightEyeClose = leftEyeOpenProbability < 0.4; // Mirror
 
         if (leftEyeCloseArray.current.length === 10 || rightEyeCloseArray.current.length === 10) {
             leftEyeCloseArray.current.shift();
@@ -80,34 +78,26 @@ export default function Main() {
 
         if (blink > 0 && currentTime - blinkTime.current > 1000) {
             setBlink(0);
-        } else if (predictBlink && blinkCounter.current === 0) {
+        } else if (predictBlink && counter.current === 0) {
             setBlink(blink + 1);
             blinkTime.current = currentTime;
-            blinkCounter.current = 1;
-        }
-
-        if (currentTime - winkTime.current > 1200 && winkCounter.current === 0 && !predictBlink &&
-            ((predictLeftWink && currentElement !== firstElement) || (predictRightWink && currentElement !== lastElement))) {
-            if (predictLeftWink) {
+            counter.current = 1;
+        } else if (!predictBlink && counter.current === 0) {
+            if (predictLeftWink && currentElement !== firstElement) {
                 setCurrentElement(navigateOptions('left', currentElement));
-            } else if (predictRightWink) {
+                counter.current = 1;
+                setBlink(0);
+            } else if (predictRightWink && currentElement !== lastElement) {
                 setCurrentElement(navigateOptions('right', currentElement));
+                counter.current = 1;
+                setBlink(0);
             }
-            winkTime.current = currentTime;
-            winkCounter.current = 1;
-            setBlink(0);
         }
 
-        if (blinkCounter.current >= 1 && blinkCounter.current < 6) {
-            blinkCounter.current += 1;
+        if (counter.current >= 1 && counter.current < 6) {
+            counter.current += 1;
         } else {
-            blinkCounter.current = 0;
-        }
-
-        if (winkCounter.current >= 1 && winkCounter.current < 10) {
-            winkCounter.current += 1;
-        } else {
-            winkCounter.current = 0;
+            counter.current = 0;
         }
 
         if (blink === 3) {
@@ -155,10 +145,10 @@ export default function Main() {
             }}
         >
             <View style={styles.camtainer}>
-                <Icon style={currentElement === 'orientation' ? [styles.icon, { color: '#ffd700' }] : styles.icon}
+                <Icon style={currentElement === 'orientation' ? [styles.icon, styles.selectedIcon] : styles.icon}
                     name={orientation === 'portrait' ? 'phone-landscape-outline' : 'phone-portrait-outline'} />
                 <Text style={[styles.icon, { fontSize: 45 }]}>{blink}</Text>
-                <Icon style={currentElement === 'photo' ? [styles.icon, { color: '#ffd700' }] : styles.icon} name='camera-outline' />
+                <Icon style={currentElement === 'photo' ? [styles.icon, styles.selectedIcon] : styles.icon} name='camera-outline' />
             </View>
         </Camera>
     );
@@ -184,8 +174,12 @@ const styles = StyleSheet.create({
     icon: {
         color: '#ffffff',
         flex: 1,
-        fontSize: 30,
+        fontSize: 27,
         textAlign: 'center'
+    },
+    selectedIcon: {
+        color: '#ffe203',
+        fontSize: 42
     },
     preview: {
         opacity: 0
