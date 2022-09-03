@@ -59,6 +59,35 @@ export default function Main() {
         setWindowWidth(windowHeight);
     };
 
+    // Function that checks if face is centered in frame
+    const centerFaceInFrame = (noseBasePosition, bottomMouthPosition, leftEarPosition, rightEarPosition, yawAngle) => {
+        // Self-defined center of frame
+        const centerFrame = {
+            top: windowHeight * 0.5,
+            bottom: windowHeight * 0.6,
+            left: windowWidth * 0.4,
+            right: windowWidth * 0.6
+        }
+
+        // Handle x and y
+        if (rightEarPosition < centerFrame.left) {
+            console.log('Move right');
+        } else if (leftEarPosition > centerFrame.right) {
+            console.log('Move left');
+        } else if (noseBasePosition < centerFrame.top) {
+            console.log('Move down');
+        } else if (bottomMouthPosition > centerFrame.bottom) {
+            console.log('Move up');
+        }
+
+        // Handle z
+        if (yawAngle > 15 && yawAngle <= 180) {
+            console.log('Tilted towards right.');
+        } else if (yawAngle > 180 && yawAngle < 345) {
+            console.log('Tilted towards left.');
+        }
+    }
+
     const handlePreview = () => {
         setInterval(() => setImage(false), 500);
     };
@@ -66,8 +95,8 @@ export default function Main() {
     // Function that handles blinks and winks
     const handleCloseEye = (leftEyeOpenProbability, rightEyeOpenProbability) => {
         const currentTime = new Date().getTime();
-        const leftEyeClose = rightEyeOpenProbability < 0.4; // Mirror
-        const rightEyeClose = leftEyeOpenProbability < 0.4; // Mirror
+        const leftEyeClose = leftEyeOpenProbability < 0.33;
+        const rightEyeClose = rightEyeOpenProbability < 0.33;
 
         if (leftEyeCloseArray.current.length === 10 || rightEyeCloseArray.current.length === 10) {
             leftEyeCloseArray.current.shift();
@@ -120,7 +149,8 @@ export default function Main() {
             setBlink(0);
         } else if (faces.length === 1) {
             faces.map((face, index) => {
-                handleCloseEye(face.leftEyeOpenProbability, face.rightEyeOpenProbability);
+                centerFaceInFrame(face.NOSE_BASE.y, face.BOTTOM_MOUTH.y, face.RIGHT_EAR.x, face.LEFT_EAR.x, face.yawAngle);
+                handleCloseEye(face.rightEyeOpenProbability, face.leftEyeOpenProbability);
             });
         }
     };
