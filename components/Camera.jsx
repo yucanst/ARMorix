@@ -31,6 +31,7 @@ export default function Main() {
     const blinkTime = useRef(0);
     const [blink, setBlink] = useState(0);
 
+    // Function that invokes action with respective to current element/option selected
     const invokeOption = () => {
         setBlink(0);
         if (currentElement === 'orientation') {
@@ -40,6 +41,7 @@ export default function Main() {
         }
     };
 
+    // Function that allows users to capture an image and save it to their gallery
     const captureImage = async () => {
         try {
             const newImage = await cameraRef.current.takePictureAsync({ quality: 1, skipProcessing: false });
@@ -50,6 +52,7 @@ export default function Main() {
         }
     };
 
+    // Function that allows user to toggle between portrait and landscape mode
     const updateOrientation = () => {
         orientation === 'portrait' ? setOrientation('landscape') : setOrientation('portrait');
         setWindowHeight(windowWidth);
@@ -60,6 +63,7 @@ export default function Main() {
         setInterval(() => setImage(false), 500);
     };
 
+    // Function that handles blinks and winks
     const handleCloseEye = (leftEyeOpenProbability, rightEyeOpenProbability) => {
         const currentTime = new Date().getTime();
         const leftEyeClose = rightEyeOpenProbability < 0.4; // Mirror
@@ -72,39 +76,45 @@ export default function Main() {
         leftEyeCloseArray.current.push(leftEyeClose);
         rightEyeCloseArray.current.push(rightEyeClose);
 
+        // Boolean variables that predict whether user has blinked/winked (eyes open -> close -> open)
         const predictLeftWink = leftEyeCloseArray.current[0] === false && leftEyeCloseArray.current[4] && leftEyeCloseArray.current[9] === false;
         const predictRightWink = rightEyeCloseArray.current[0] === false && rightEyeCloseArray.current[4] && rightEyeCloseArray.current[9] === false;
         const predictBlink = predictLeftWink && predictRightWink;
 
-        if (blink > 0 && currentTime - blinkTime.current > 1000) {
+        if (blink > 0 && currentTime - blinkTime.current > 1000) { // Reset blink count if next blink not within 1s (not consecutive)
             setBlink(0);
-        } else if (predictBlink && counter.current === 0) {
+        } else if (predictBlink && counter.current === 0) { // Increase blink count upon blink
             setBlink(blink + 1);
             blinkTime.current = currentTime;
             counter.current = 1;
-        } else if (!predictBlink && counter.current === 0) {
+        } else if ((predictLeftWink || predictRightWink) && counter.current === 0) { // Navigate element/option upon winks
             if (predictLeftWink && currentElement !== firstElement) {
                 setCurrentElement(navigateOptions('left', currentElement));
-                counter.current = 1;
-                setBlink(0);
             } else if (predictRightWink && currentElement !== lastElement) {
                 setCurrentElement(navigateOptions('right', currentElement));
-                counter.current = 1;
-                setBlink(0);
             }
+            counter.current = 1;
+            setBlink(0);
         }
 
+        // Prevent unnecessary loops
         if (counter.current >= 1 && counter.current < 6) {
             counter.current += 1;
         } else {
             counter.current = 0;
         }
 
+        // Trigger event upon 3 consecutive blinks
         if (blink === 3) {
             invokeOption();
         }
     };
 
+    /*
+        Function that handles detected faces, refer to:
+        https://docs.expo.dev/versions/latest/sdk/facedetector/#facefeature
+        Currently programmed to support only 1 face in frame at all times
+    */
     const handleFacesDetected = ({ faces }) => {
         if (faces.length === 0) {
             setBlink(0);
@@ -118,20 +128,22 @@ export default function Main() {
     useEffect(() => {
         (async () => {
             const camPermission = await Camera.requestCameraPermissionsAsync();
-            const mlPermission = await MediaLibrary.requestPermissionsAsync();
             setCameraPermission(camPermission.status === 'granted');
+            const mlPermission = await MediaLibrary.requestPermissionsAsync();
             setMediaLibraryPermission(mlPermission.status === 'granted');
         })();
     }, []);
-
-    if (!cameraPermission || !mediaLibraryPermission) {
-        return <Text>Please allow Camera and Gallery permissions in Settings.</Text>
-    };
 
     if (image) {
         return <Image style={[styles.preview, { height: windowHeight, width: windowWidth }]} source={{ uri: image }} onLoadStart={handlePreview} />
     };
 
+    // Ensure necessary permissions were given by user before rendering application
+    if (!cameraPermission || !mediaLibraryPermission) {
+        return <Text>Please allow Camera and Gallery permissions in Settings.</Text>
+    };
+
+    // Application (camera) user interface
     return (
         <Camera
             style={[styles.cam, { height: windowHeight, width: windowWidth }]} ref={cameraRef}
