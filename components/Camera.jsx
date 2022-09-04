@@ -60,27 +60,33 @@ export default function Main() {
     };
 
     // Function that checks if face is centered in frame
-    const centerFaceInFrame = (noseBasePosition, bottomMouthPosition, leftEarPosition, rightEarPosition, yawAngle) => {
-        // Self-defined center of frame
-        const centerFrame = {
-            top: windowHeight * 0.5,
-            bottom: windowHeight * 0.6,
-            left: windowWidth * 0.4,
-            right: windowWidth * 0.6
+    const centerFaceInFrame = (bounds, yawAngle) => {
+        // 30x30 square in the center of the frame
+        const centerSquare = {
+            top: windowHeight / 2 - 30,
+            bottom: windowHeight / 2 + 30,
+            left: windowWidth / 2 - 30,
+            right: windowWidth / 2 + 30
         }
 
-        // Handle x and y
-        if (rightEarPosition < centerFrame.left) {
+        // Middle point of the user's face
+        const faceMiddlePoint = {
+            x: (bounds.origin.x * 2 + bounds.size.width) / 2,
+            y: (bounds.origin.y * 2 + bounds.size.height) / 2,
+        }
+
+        // Ensure middle point of user's face is inside 30x30 square (x and y)
+        if (faceMiddlePoint.x < centerSquare.left) {
             console.log('Move right');
-        } else if (leftEarPosition > centerFrame.right) {
+        } else if (faceMiddlePoint.x > centerSquare.right) {
             console.log('Move left');
-        } else if (noseBasePosition < centerFrame.top) {
+        } else if (faceMiddlePoint.y < centerSquare.top) {
             console.log('Move down');
-        } else if (bottomMouthPosition > centerFrame.bottom) {
+        } else if (faceMiddlePoint.y > centerSquare.bottom) {
             console.log('Move up');
         }
 
-        // Handle z
+        // Ensure face is facing front (z)
         if (yawAngle > 15 && yawAngle <= 180) {
             console.log('Tilted towards right.');
         } else if (yawAngle > 180 && yawAngle < 345) {
@@ -147,11 +153,10 @@ export default function Main() {
     const handleFacesDetected = ({ faces }) => {
         if (faces.length === 0) {
             setBlink(0);
-        } else if (faces.length === 1) {
-            faces.map((face, index) => {
-                centerFaceInFrame(face.NOSE_BASE.y, face.BOTTOM_MOUTH.y, face.RIGHT_EAR.x, face.LEFT_EAR.x, face.yawAngle);
-                handleCloseEye(face.rightEyeOpenProbability, face.leftEyeOpenProbability);
-            });
+        } else {
+            const face = faces[0];
+            centerFaceInFrame(face.bounds, face.yawAngle);
+            handleCloseEye(face.rightEyeOpenProbability, face.leftEyeOpenProbability);
         }
     };
 
