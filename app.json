@@ -12,10 +12,22 @@
     },
     "plugins": [
       [
-        "expo-media-library", {
+        "expo-media-library",
+        {
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
           "isAccessMediaLocationEnabled": true
+        }
+      ],
+      [
+        "with-rn-bluetooth-classic",
+        {
+          "peripheralUsageDescription": "Allow $(PRODUCT_NAME) to check Bluetooth information.",
+          "alwaysUsageDescription": "Allow $(PRODUCT_NAME) to always use Bluetooth information.",
+          "protocols": [
+            "com.myCompany.p1",
+            "com.myCompany.p2"
+          ]
         }
       ]
     ],

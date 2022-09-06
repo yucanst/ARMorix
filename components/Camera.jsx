@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import RNBluetoothClassic, { BluetoothEventType, BluetoothDevice } from 'react-native-bluetooth-classic';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { Camera } from 'expo-camera';
@@ -6,14 +7,15 @@ import { navigateOptions } from './Navigation';
 import * as FaceDetector from 'expo-face-detector';
 import * as MediaLibrary from 'expo-media-library';
 
-const firstElement = 'orientation';
-const lastElement = 'photo';
+const FIRST_ELEMENT = 'orientation';
+const LAST_ELEMENT = 'photo';
 
 export default function Main() {
     // Application settings
     const cameraRef = useRef();
     const [cameraPermission, setCameraPermission] = useState(false);
     const [mediaLibraryPermission, setMediaLibraryPermission] = useState(false);
+    const [bluetoothSocket, setBluetoothSocket] = useState(false);
     const [windowHeight, setWindowHeight] = useState(Dimensions.get('window').height);
     const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
 
@@ -75,22 +77,28 @@ export default function Main() {
             y: (bounds.origin.y * 2 + bounds.size.height) / 2,
         }
 
-        // Ensure middle point of user's face is inside 30x30 square (x and y)
-        if (faceMiddlePoint.x < centerSquare.left) {
-            console.log('Move right');
-        } else if (faceMiddlePoint.x > centerSquare.right) {
-            console.log('Move left');
-        } else if (faceMiddlePoint.y < centerSquare.top) {
-            console.log('Move down');
-        } else if (faceMiddlePoint.y > centerSquare.bottom) {
-            console.log('Move up');
-        }
+        if (RNBluetoothClassic.getConnectedDevice(bluetoothSocket.address)) { // Ensure HC-05 active socket
+            bluetoothSocket.connect(); // Connect to HC-05
 
-        // Ensure face is facing front (z)
-        if (yawAngle > 15 && yawAngle <= 180) {
-            console.log('Tilted towards right.');
-        } else if (yawAngle > 180 && yawAngle < 345) {
-            console.log('Tilted towards left.');
+            // Ensure middle point of user's face is inside 30x30 square (x and y)
+            if (faceMiddlePoint.x < centerSquare.left) {
+                console.log('Move right');
+            } else if (faceMiddlePoint.x > centerSquare.right) {
+                console.log('Move left');
+            } else if (faceMiddlePoint.y < centerSquare.top) {
+                console.log('Move down');
+            } else if (faceMiddlePoint.y > centerSquare.bottom) {
+                console.log('Move up');
+            }
+
+            // Ensure face is facing front (z)
+            /* if (yawAngle > 15 && yawAngle <= 180) {
+                console.log('Tilted towards right.');
+            } else if (yawAngle > 180 && yawAngle < 345) {
+                console.log('Tilted towards left.');
+            } */
+        } else {
+            setBluetoothSocket(false);
         }
     }
 
@@ -123,9 +131,9 @@ export default function Main() {
             blinkTime.current = currentTime;
             counter.current = 1;
         } else if ((predictLeftWink || predictRightWink) && counter.current === 0) { // Navigate element/option upon winks
-            if (predictLeftWink && currentElement !== firstElement) {
+            if (predictLeftWink && currentElement !== FIRST_ELEMENT) {
                 setCurrentElement(navigateOptions('left', currentElement));
-            } else if (predictRightWink && currentElement !== lastElement) {
+            } else if (predictRightWink && currentElement !== LAST_ELEMENT) {
                 setCurrentElement(navigateOptions('right', currentElement));
             }
             counter.current = 1;
@@ -162,10 +170,21 @@ export default function Main() {
 
     useEffect(() => {
         (async () => {
-            const camPermission = await Camera.requestCameraPermissionsAsync();
-            setCameraPermission(camPermission.status === 'granted');
-            const mlPermission = await MediaLibrary.requestPermissionsAsync();
-            setMediaLibraryPermission(mlPermission.status === 'granted');
+            try {
+                const bondedDevices = await RNBluetoothClassic.getBondedDevices();
+                bondedDevices.forEach(bt => {
+                    if (bt.name === 'HC-05') {
+                        setBluetoothSocket(bt); // Retrieve HC-05 details from paired devices
+                    }
+                });
+            } catch (err) {
+                console.log(err);
+            } finally {
+                const camPermission = await Camera.requestCameraPermissionsAsync();
+                setCameraPermission(camPermission.status === 'granted');
+                const mlPermission = await MediaLibrary.requestPermissionsAsync();
+                setMediaLibraryPermission(mlPermission.status === 'granted');
+            }
         })();
     }, []);
 
@@ -174,6 +193,10 @@ export default function Main() {
     };
 
     // Ensure necessary permissions were given by user before rendering application
+    if (!bluetoothSocket) {
+        return <Text>Please ensure device is connected with HC-05 via Bluetooth.</Text>
+    }
+
     if (!cameraPermission || !mediaLibraryPermission) {
         return <Text>Please allow Camera and Gallery permissions in Settings.</Text>
     };
@@ -186,7 +209,7 @@ export default function Main() {
             faceDetectorSettings={{
                 detectLandmarks: FaceDetector.FaceDetectorLandmarks.all,
                 minDetectionInterval: 60,
-                mode: FaceDetector.FaceDetectorMode.fast,
+                mode: FaceDetector.FaceDetectorMode.accurate,
                 runClassifications: FaceDetector.FaceDetectorClassifications.all,
                 tracking: true
             }}
