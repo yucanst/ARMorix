@@ -23,8 +23,7 @@
     "with-rn-bluetooth-classic": "^1.0.5"
   },
   "devDependencies": {
-    "@babel/core": "^7.12.9",
-    "@mediapipe/drawing_utils": "^0.3.1620248257"
+    "@babel/core": "^7.12.9"
   },
   "private": true
 }

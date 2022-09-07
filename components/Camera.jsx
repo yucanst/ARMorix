@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import RNBluetoothClassic, { BluetoothEventType, BluetoothDevice } from 'react-native-bluetooth-classic';
+import RNBluetoothClassic from 'react-native-bluetooth-classic';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import { Buffer } from 'buffer';
 import { Camera } from 'expo-camera';
 import { navigateOptions } from './Navigation';
 import * as FaceDetector from 'expo-face-detector';
@@ -15,7 +16,6 @@ export default function Main() {
     const cameraRef = useRef();
     const [cameraPermission, setCameraPermission] = useState(false);
     const [mediaLibraryPermission, setMediaLibraryPermission] = useState(false);
-    const [bluetoothSocket, setBluetoothSocket] = useState(false);
     const [windowHeight, setWindowHeight] = useState(Dimensions.get('window').height);
     const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
 
@@ -23,7 +23,9 @@ export default function Main() {
     const [image, setImage] = useState(false);
     const [currentElement, setCurrentElement] = useState('orientation');
 
-    // Arm settings
+    // Bluetooth settings
+    const bluetoothMessage = useRef('');
+    const [bluetoothSocket, setBluetoothSocket] = useState(false);
     const [orientation, setOrientation] = useState('portrait');
 
     // Tracking settings
@@ -54,6 +56,16 @@ export default function Main() {
         }
     };
 
+    // Function to send data via Bluetooth
+    const sendDataToArduino = async () => {
+        try {
+            await RNBluetoothClassic.writeToDevice(bluetoothSocket.address, bluetoothMessage.current);
+            await bluetoothSocket.write(Buffer.alloc(1, bluetoothMessage.current));
+        } catch (err) {
+            console.log(err);
+        }
+    }
+
     // Function that allows user to toggle between portrait and landscape mode
     const updateOrientation = () => {
         orientation === 'portrait' ? setOrientation('landscape') : setOrientation('portrait');
@@ -77,28 +89,29 @@ export default function Main() {
             y: (bounds.origin.y * 2 + bounds.size.height) / 2,
         }
 
-        if (RNBluetoothClassic.getConnectedDevice(bluetoothSocket.address)) { // Ensure HC-05 active socket
-            bluetoothSocket.connect(); // Connect to HC-05
-
-            // Ensure middle point of user's face is inside 30x30 square (x and y)
-            if (faceMiddlePoint.x < centerSquare.left) {
-                console.log('Move right');
-            } else if (faceMiddlePoint.x > centerSquare.right) {
-                console.log('Move left');
-            } else if (faceMiddlePoint.y < centerSquare.top) {
-                console.log('Move down');
-            } else if (faceMiddlePoint.y > centerSquare.bottom) {
-                console.log('Move up');
-            }
-
-            // Ensure face is facing front (z)
-            /* if (yawAngle > 15 && yawAngle <= 180) {
-                console.log('Tilted towards right.');
-            } else if (yawAngle > 180 && yawAngle < 345) {
-                console.log('Tilted towards left.');
-            } */
+        // Ensure middle point of user's face is inside 30x30 square (x and y)
+        if (faceMiddlePoint.x < centerSquare.left) {
+            bluetoothMessage.current = 'r';
+        } else if (faceMiddlePoint.x > centerSquare.right) {
+            bluetoothMessage.current = 'l';
+        } else if (faceMiddlePoint.y < centerSquare.top) {
+            bluetoothMessage.current = 'd';
+        } else if (faceMiddlePoint.y > centerSquare.bottom) {
+            bluetoothMessage.current = 'u';
         } else {
-            setBluetoothSocket(false);
+            bluetoothMessage.current = 'c';
+        }
+
+        // Ensure face is facing front (z)
+        /* if (yawAngle > 15 && yawAngle <= 180) {
+            console.log('Tilted towards right.');
+        } else if (yawAngle > 180 && yawAngle < 345) {
+            console.log('Tilted towards left.');
+        } */
+
+        // Ensure HC-05 active socket before sending data
+        if (RNBluetoothClassic.getConnectedDevice(bluetoothSocket.address)) {
+            sendDataToArduino();
         }
     }
 
@@ -158,13 +171,18 @@ export default function Main() {
         https://docs.expo.dev/versions/latest/sdk/facedetector/#facefeature
         Currently programmed to support only 1 face in frame at all times
     */
-    const handleFacesDetected = ({ faces }) => {
+    const handleFacesDetected = async ({ faces }) => {
         if (faces.length === 0) {
             setBlink(0);
         } else {
             const face = faces[0];
-            centerFaceInFrame(face.bounds, face.yawAngle);
+            const btConnection = await bluetoothSocket.isConnected();
             handleCloseEye(face.rightEyeOpenProbability, face.leftEyeOpenProbability);
+            if (btConnection) { // Ensure HC-05 is connected
+                centerFaceInFrame(face.bounds, face.yawAngle);
+            } else {
+                bluetoothSocket.connect();
+            }
         }
     };
 
@@ -175,6 +193,7 @@ export default function Main() {
                 bondedDevices.forEach(bt => {
                     if (bt.name === 'HC-05') {
                         setBluetoothSocket(bt); // Retrieve HC-05 details from paired devices
+                        RNBluetoothClassic.cancelDiscovery();
                     }
                 });
             } catch (err) {
@@ -195,6 +214,8 @@ export default function Main() {
     // Ensure necessary permissions were given by user before rendering application
     if (!bluetoothSocket) {
         return <Text>Please ensure device is connected with HC-05 via Bluetooth.</Text>
+    } else {
+        // Handle BT state changes
     }
 
     if (!cameraPermission || !mediaLibraryPermission) {
