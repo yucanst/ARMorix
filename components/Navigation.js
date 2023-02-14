@@ -10,12 +10,15 @@ const options = {
     }
 };
 
-function navigateOptions(winkDirection, currentElement) {
+/*
+    Function that allows user to navigate available options upon winking:
+    - Left eye: Navigate to previous option
+    - Right eye: Navigate to next option
+*/
+export function navigateOptions(winkDirection, currentElement) {
     if (winkDirection === 'left') {
         return options[currentElement].previous;
     } else if (winkDirection === 'right') {
         return options[currentElement].next;
     }
 };
-
-export { navigateOptions };
