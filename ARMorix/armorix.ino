@@ -3,22 +3,22 @@
 #include <Servo.h>
 
 /* Bluetooth */
-#define BTRX 9
-#define BTTX 8
+#define BTRX 6 
+#define BTTX 5
 SoftwareSerial BTserial(BTTX, BTRX);
 
 /* Servo motors */
-#define TOP 10      // Base Servo
-#define MIDDLE 11   // Tilt Servo
-#define BOTTOM 9    // Landscape Servo
+#define TOP 10      // Phone base Servo
+#define MIDDLE 9   //  Middle Servo
+#define BOTTOM 11    // Arm base Servo
 Servo TopServo;
 Servo MiddleServo;
 Servo BottomServo;
 
 /* Initial position */
-#define PORTRAIT_TOP 10     // setting to 10 for all servos first, not final - Hakiim
-#define PORTRAIT_MIDDLE 10
-#define PORTRAIT_BOTTOM 10
+#define PORTRAIT_TOP 0     
+#define PORTRAIT_MIDDLE 0   // need to reposition the physical servo 
+#define PORTRAIT_BOTTOM 90
 #define LANDSCAPE_TOP 170
 #define LANDSCAPE_MIDDLE 120
 #define LANDSCAPE_BOTTOM 110
